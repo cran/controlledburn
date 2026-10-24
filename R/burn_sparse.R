@@ -1,0 +1,178 @@
+#' @title Deprecated: use burn() instead
+#'
+#' @description
+#' `burn_sparse()` has been removed. Use [burn()] instead, which
+#' produces identical output for polygon input and also supports
+#' lines and points.
+#'
+#' @param ... ignored
+#' @return This function always errors; it never returns a value. Call
+#'   [burn()] instead.
+#' @examples
+#' # burn_sparse() is deprecated and errors; use burn() instead
+#' try(burn_sparse())
+#' @export
+burn_sparse <- function(...) {
+  .Deprecated("burn", msg = paste(
+    "burn_sparse() has been removed.",
+    "Use burn() instead (identical output for polygons,",
+    "plus line and point support)."
+  ))
+  stop("burn_sparse() is no longer available. Use burn().")
+}
+
+#' @export
+print.controlledburn <- function(x, ...) {
+  ncol <- x$dimension[1]
+  nrow <- x$dimension[2]
+  n_runs <- nrow(x$runs)
+  n_edges <- nrow(x$edges)
+  n_lines  <- if (!is.null(x$lines))  nrow(x$lines)  else 0L
+  n_points <- if (!is.null(x$points)) nrow(x$points) else 0L
+  n_ids <- length(unique(c(x$runs$id, x$edges$id, x$lines$id, x$points$id)))
+
+  total_interior <- if (n_runs > 0)
+    sum(as.numeric(x$runs$col_end - x$runs$col_start + 1L)) else 0
+  total_cells <- total_interior + n_edges + n_lines + n_points
+  grid_cells <- as.numeric(ncol) * as.numeric(nrow)
+  sparsity <- 1 - total_cells / grid_cells
+
+  cat(sprintf("<controlledburn> %d x %d grid, %d geometr%s\n",
+              ncol, nrow, n_ids, if (n_ids == 1) "y" else "ies"))
+  cat(sprintf("  runs:   %d (%.0f interior cells)\n", n_runs, total_interior))
+  cat(sprintf("  edges:  %d polygon boundary cells\n", n_edges))
+  if (n_lines > 0) cat(sprintf("  lines:  %d cells\n", n_lines))
+  if (n_points > 0) cat(sprintf("  points: %d cells\n", n_points))
+  cat(sprintf("  sparsity: %.1f%% empty\n", sparsity * 100))
+  invisible(x)
+}
+
+#' Materialise a controlledburn sparse result into a dense matrix
+#'
+#' Converts the sparse run/edge/line tables from [burn()] into a dense
+#' matrix. With `target`, only the cells inside a sub-window of the
+#' burn grid are materialised: the sparse tables are first filtered and
+#' re-indexed by [crop_burn()] and only the sub-window is allocated, so
+#' a chunk of a very large burn grid can be realised without ever
+#' allocating the full grid.
+#'
+#' The sub-window is snapped outward to the burn grid's cell boundaries
+#' (see [crop_burn()]), so the returned matrix covers at least `target`.
+#' Use `crop_burn(x, target)` to recover the snapped grid's `extent` and
+#' `dimension` (for plotting with `rasterImage()`, say). The
+#' materialised chunk is identical to the corresponding sub-matrix of the
+#' full materialisation.
+#'
+#' @param x A `controlledburn` object returned by [burn()].
+#' @param target optional numeric `c(xmin, xmax, ymin, ymax)`; when given,
+#'   materialise only this sub-window of the burn grid.
+#' @param fun character, the pixel function:
+#'   \describe{
+#'     \item{`"sum"`}{(default) Polygon runs contribute 1, edges
+#'       contribute their coverage fraction, lines contribute length,
+#'       points contribute 1. Values accumulate additively across
+#'       overlapping geometries. Background is 0. Mixed geometry kinds
+#'       are summed as-is, although the measures have different units.}
+#'     \item{`"id"`}{Write the geometry id (`$runs$id`, `$edges$id`,
+#'       etc.) into each cell. When geometries overlap, the last id
+#'       wins. Background is `NA`.}
+#'   }
+#' @return A numeric matrix with dimensions `nrow x ncol` of the burn
+#'   grid, or of the snapped `target` window.
+#' @export
+#' @examples
+#' if (requireNamespace("geos", quietly = TRUE)) {
+#'   poly <- geos::as_geos_geometry("POLYGON ((1 1, 9 1, 9 9, 1 9, 1 1))")
+#'   r <- burn(poly, extent = c(0, 10, 0, 10), dimension = c(100L, 100L))
+#'   full <- materialise_chunk(r)
+#'   chunk <- materialise_chunk(r, target = c(2, 5, 3, 7))
+#'   dim(chunk)
+#'   crop_burn(r, c(2, 5, 3, 7))$extent
+#' }
+materialise_chunk <- function(x, fun = c("sum", "id"), target = NULL) {
+  stopifnot(inherits(x, "controlledburn"))
+  fun <- match.arg(fun)
+  if (!is.null(target)) {
+    x <- crop_burn(x, target)
+    if (any(x$dimension < 1L)) {
+      stop("target extent does not overlap the burn grid")
+    }
+  }
+  ext <- x$extent
+  dim <- x$dimension
+  ncol_full <- dim[1]
+  nrow_full <- dim[2]
+
+  if (fun == "id") {
+    mat <- matrix(NA_real_, nrow = nrow_full, ncol = ncol_full)
+
+    if (nrow(x$runs) > 0) {
+      for (i in seq_len(nrow(x$runs))) {
+        r <- x$runs$row[i]
+        cs <- x$runs$col_start[i]
+        ce <- x$runs$col_end[i]
+        mat[r, cs:ce] <- x$runs$id[i]
+      }
+    }
+
+    if (nrow(x$edges) > 0) {
+      for (i in seq_len(nrow(x$edges))) {
+        mat[x$edges$row[i], x$edges$col[i]] <- x$edges$id[i]
+      }
+    }
+
+    if (!is.null(x$lines) && nrow(x$lines) > 0) {
+      for (i in seq_len(nrow(x$lines))) {
+        mat[x$lines$row[i], x$lines$col[i]] <- x$lines$id[i]
+      }
+    }
+
+    if (!is.null(x$points) && nrow(x$points) > 0) {
+      for (i in seq_len(nrow(x$points))) {
+        mat[x$points$row[i], x$points$col[i]] <- x$points$id[i]
+      }
+    }
+  } else {
+    # fun == "sum"
+    mat <- matrix(0.0, nrow = nrow_full, ncol = ncol_full)
+
+    if (nrow(x$runs) > 0) {
+      for (i in seq_len(nrow(x$runs))) {
+        r <- x$runs$row[i]
+        cs <- x$runs$col_start[i]
+        ce <- x$runs$col_end[i]
+        mat[r, cs:ce] <- mat[r, cs:ce] + 1
+      }
+    }
+
+    if (nrow(x$edges) > 0) {
+      for (i in seq_len(nrow(x$edges))) {
+        r <- x$edges$row[i]
+        c <- x$edges$col[i]
+        mat[r, c] <- mat[r, c] + x$edges$fraction[i]
+      }
+    }
+
+    if (!is.null(x$lines) && nrow(x$lines) > 0) {
+      for (i in seq_len(nrow(x$lines))) {
+        r <- x$lines$row[i]
+        c <- x$lines$col[i]
+        mat[r, c] <- mat[r, c] + x$lines$length[i]
+      }
+    }
+
+    if (!is.null(x$points) && nrow(x$points) > 0) {
+      for (i in seq_len(nrow(x$points))) {
+        r <- x$points$row[i]
+        c <- x$points$col[i]
+        mat[r, c] <- mat[r, c] + 1
+      }
+    }
+  }
+
+  mat
+}
+
+#' @rdname materialise_chunk
+#' @export
+materialize_chunk <- materialise_chunk

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Architecture: how controlledburn developed</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Architecture: how controlledburn
+developed</h1>
+
+
+
+<div id="origins-fasterize" class="section level2">
+<h2>Origins: fasterize</h2>
+<p>controlledburn began as a fork of <a href="https://github.com/hypertidy/fasterize">fasterize</a> by Noam Ross
+and EcoHealth Alliance. fasterize was a fast polygon rasterizer for R:
+given a set of polygons and a raster template, it produced a
+materialised raster using a scanline algorithm based on Wylie et al.
+(1967). Its key properties:</p>
+<ul>
+<li><strong>Cell-centre rule</strong>: a cell is “inside” the polygon if
+the cell centre falls inside the polygon boundary. Binary in/out, no
+coverage fractions.</li>
+<li><strong>Pixel functions</strong>: Sum, First, Last, Min, Max, Count,
+Any — applied per-cell across overlapping polygons.</li>
+<li><strong>Dense output</strong>: always materialised a full raster
+object in memory.</li>
+<li><strong>Dependencies</strong>: Rcpp, sf (for geometry input),
+Armadillo (for the raster matrix).</li>
+</ul>
+<p>fasterize was fast — much faster than
+<code>raster::rasterize()</code> — but it required a dense raster
+template and could not express partial coverage at polygon
+boundaries.</p>
+</div>
+<div id="the-sparse-insight" class="section level2">
+<h2>The sparse insight</h2>
+<p>controlledburn’s founding insight was that the scanline sweep could
+emit <strong>sparse run-length encoded output</strong> instead of
+filling a dense matrix. For a polygon on a grid, most cells are either
+fully inside (runs of consecutive columns) or fully outside. Only the
+boundary cells need individual attention. The output:</p>
+<ul>
+<li><strong><code>$runs</code></strong>:
+<code>(row, col_start, col_end, id)</code> — interior cells, full
+coverage. One record per horizontal span.</li>
+<li><strong><code>$edges</code></strong>:
+<code>(row, col, fraction, id)</code> — boundary cells with a coverage
+fraction in (0, 1).</li>
+</ul>
+<p>This is O(perimeter) in both time and memory, rather than O(area). A
+small polygon on a 100,000 × 100,000 grid produces a handful of run
+records, not 10 billion pixels.</p>
+</div>
+<div id="integrating-exactextract" class="section level2">
+<h2>Integrating exactextract</h2>
+<p>The exact coverage fractions came from Daniel Baston’s <a href="https://github.com/isciences/exactextract">exactextract</a> C++
+library. The algorithm traces polygon rings through grid cells,
+computing analytically exact sub-pixel coverage fractions — not
+sampling, not approximation. It was the gold standard for zonal
+statistics.</p>
+<p>The first integration vendored exactextract’s C++ code into
+controlledburn. This brought exact fractions but also brought the
+<strong>GEOS C API</strong> as a hard dependency. exactextract’s
+<code>raster_cell_intersection()</code> function took
+<code>GEOSGeometry*</code> pointers and called GEOS functions
+throughout: <code>GEOSGetExteriorRing_r</code>,
+<code>GEOSCoordSeq_getXY_r</code>, <code>GEOSisEmpty_r</code>, etc.</p>
+<p>The pipeline at this stage:</p>
+<pre><code>WKB bytes (from R)
+  → GEOS WKBReader → GEOSGeometry*
+    → exactextract::raster_cell_intersection(grid, ctx, geom)
+      → dense Raster&lt;float&gt; (bounding-box-sized matrix)
+    → dense_to_sparse() → runs + edges tables</code></pre>
+<p>This was <code>burn_sparse()</code>. It worked, but it allocated a
+dense intermediate for each geometry’s bounding box, required GEOS at
+runtime, and only handled polygons.</p>
+</div>
+<div id="replacing-geos-the-native-core" class="section level2">
+<h2>Replacing GEOS: the native core</h2>
+<p>The next major step was replacing every GEOS dependency with native
+C++17 code. This happened in stages:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>WKB parser</strong> (~230 lines): reads ISO WKB and EWKB,
+both byte orders, silently skips Z/M ordinates. No external
+dependencies. Replaces <code>GEOSWKBReader_read_r</code>.</p></li>
+<li><p><strong>Ring walker</strong>: walks polygon rings through the
+grid cell-by-cell, tracking entry/exit sides and building traversal
+coordinate lists. Replaces exactextract’s GEOS-dependent ring iteration
+(<code>GEOSGetExteriorRing_r</code>,
+<code>GEOSGetInteriorRingN_r</code>,
+<code>GEOSCoordSeq_getXY_r</code>).</p></li>
+<li><p><strong>Shoelace orientation</strong>: determines ring winding
+(CCW vs CW) via the signed-area formula. Replaces
+<code>geos_is_ccw</code>.</p></li>
+<li><p><strong>Coordinate min/max envelopes</strong>: simple loop over
+coordinates. Replaces <code>GEOSEnvelope_r</code> and the component-box
+queries.</p></li>
+</ol>
+<p>The analytical coverage math — the actual geometric computation of
+how much of a cell is covered by a polygon edge — was kept from
+exactextract. These files are pure computational geometry with no GEOS
+dependency: <code>cell.cpp</code>, <code>traversal.cpp</code>,
+<code>traversal_areas.cpp</code>, <code>box.cpp</code>,
+<code>grid.cpp</code>, <code>coordinate.cpp</code>,
+<code>side.cpp</code>, <code>measures.cpp</code>,
+<code>perimeter_distance.cpp</code>. Nine files, vendored in
+<code>src/exactextract/</code>.</p>
+<p>The result was <code>burn()</code> (originally
+<code>burn_scanline()</code>), a GEOS-free scanline engine producing the
+same sparse output.</p>
+</div>
+<div id="unified-geometry-rasterization" class="section level2">
+<h2>Unified geometry rasterization</h2>
+<p>With the native core in place, the engine was extended beyond
+polygons to handle all geometry types through a single
+<code>burn()</code> entry point:</p>
+<ul>
+<li><strong>Polygons</strong> produce <code>$runs</code> (interior
+cells, full coverage) and <code>$edges</code> (boundary cells, exact
+coverage fractions).</li>
+<li><strong>Lines</strong> produce <code>$lines</code> with
+<code>(row, col, length, id)</code> — the absolute length of line within
+each cell, in CRS units.</li>
+<li><strong>Points</strong> produce <code>$points</code> with
+<code>(row, col, id)</code> — no measure column (a point either falls in
+a cell or it doesn’t).</li>
+</ul>
+<p>Each table’s measure means exactly one thing. No semantic confusion
+from mixing polygon fractions with line lengths in a shared column.</p>
+</div>
+<div id="two-burn-modes" class="section level2">
+<h2>Two burn modes</h2>
+<p>The <code>mode</code> parameter on <code>burn()</code> selects
+between two code paths:</p>
+<div id="coverage-mode-default" class="section level3">
+<h3>Coverage mode (default)</h3>
+<p>Uses the full exactextract walker to compute exact coverage fractions
+for every boundary cell. The walker traces each ring through the grid,
+building coordinate-level traversal records, then computes analytical
+cell-intersection areas. O(perimeter) time and memory.</p>
+<p>This is the mode to use when exact area conservation matters — the
+total burned coverage equals the polygon’s true area to floating-point
+precision.</p>
+</div>
+<div id="approx-mode" class="section level3">
+<h3>Approx mode</h3>
+<p>Reimplements the fasterize cell-centre rule with a dedicated
+lightweight sweep that <strong>bypasses the walker entirely</strong>.
+For each polygon edge, it computes x-intercepts at each row’s scanline
+y-midpoint, accumulates winding numbers per row, and sweeps
+left-to-right to emit runs. ~120 lines of C++.</p>
+<p>No traversal coordinates, no <code>CellRecord</code> objects, no
+<code>BoundaryCellRecord</code> bookkeeping — just edge-row
+intersections and winding arithmetic. The output is runs only, no
+<code>$edges</code> for polygons.</p>
+<p>The boundary convention is left-inclusive (a cell whose centre falls
+exactly on a polygon edge is classified as “inside”), matching
+fasterize’s behaviour. On constructed geometries (aligned rectangles,
+offset rectangles, triangles, holes), approx mode produces cell-for-cell
+identical results to fasterize.</p>
+</div>
+</div>
+<div id="performance" class="section level2">
+<h2>Performance</h2>
+<p>Benchmarked on CGAZ (218 country polygons, 10.1M vertices):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Grid</th>
+<th>Cells</th>
+<th>cb approx</th>
+<th>fasterize</th>
+<th>Winner</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>256 × 128</td>
+<td>33K</td>
+<td>1.0s</td>
+<td>0.5s</td>
+<td>fasterize</td>
+</tr>
+<tr class="even">
+<td>4096 × 2048</td>
+<td>8.4M</td>
+<td>1.1s</td>
+<td>0.4s</td>
+<td>fasterize</td>
+</tr>
+<tr class="odd">
+<td><strong>16384 × 8192</strong></td>
+<td><strong>134M</strong></td>
+<td><strong>1.2s</strong></td>
+<td><strong>2.8s</strong></td>
+<td><strong>cb</strong></td>
+</tr>
+<tr class="even">
+<td>32768 × 16384</td>
+<td>537M</td>
+<td>1.4s</td>
+<td>9.7s</td>
+<td>cb</td>
+</tr>
+<tr class="odd">
+<td>65536 × 32768</td>
+<td>2.1B</td>
+<td>1.7s</td>
+<td>OOM</td>
+<td>cb only</td>
+</tr>
+<tr class="even">
+<td>131072 × 65536</td>
+<td>8.6B</td>
+<td>2.4s</td>
+<td>OOM</td>
+<td>cb only</td>
+</tr>
+</tbody>
+</table>
+<p>The crossover is around 134 million cells. Below that, fasterize’s
+simpler per-cell cost wins. Above it, controlledburn’s sparse output and
+O(perimeter) memory win decisively — fasterize runs out of memory above
+~2 billion cells, while controlledburn reaches 8.6 billion in 2.4
+seconds.</p>
+</div>
+<div id="current-dependency-tree" class="section level2">
+<h2>Current dependency tree</h2>
+<p>After removing <code>burn_sparse()</code> and the GEOS
+dependency:</p>
+<ul>
+<li><strong>C++ core</strong> (<code>cpp/</code>): zero external
+dependencies. Pure C++17.</li>
+<li><strong>R package</strong>: <code>cpp11</code> (LinkingTo),
+<code>wk</code> (Imports). No GEOS, no sf, no Armadillo.</li>
+<li><strong>Python package</strong>: pybind11 + scikit-build-core. No
+GEOS.</li>
+<li><strong>Vendored exactextract</strong>: 9 GEOS-free analytical
+geometry files (coverage fractions, box intersections, traversal
+areas).</li>
+</ul>
+</div>
+<div id="the-three-surfaces" class="section level2">
+<h2>The three surfaces</h2>
+<p>The C++ core is canonical. R and Python are thin bindings:</p>
+<pre><code>                     ┌──────────────────────┐
+                     │    C++ core (cpp/)    │
+                     │  scanline engine      │
+                     │  WKB parser           │
+                     │  exactextract subset  │
+                     │  materialize.hpp      │
+                     └─────────┬────────────┘
+                               │
+               ┌───────────────┼───────────────┐
+               │               │               │
+        ┌──────▼──────┐ ┌─────▼──────┐ ┌──────▼──────┐
+        │  R package  │ │   Python   │ │   C++ lib   │
+        │  cpp11 shim │ │  pybind11  │ │  CMake      │
+        │  burn()     │ │  burn()    │ │  burn()     │
+        └─────────────┘ └────────────┘ └─────────────┘</code></pre>
+<p><code>tools/sync-core.sh</code> copies the canonical C++ source from
+<code>cpp/</code> into the R package’s <code>src/</code> and
+<code>inst/include/</code> directories. The Python package’s
+<code>CMakeLists.txt</code> references <code>cpp/</code> directly.</p>
+<p>Shared parity fixtures in <code>fixtures/</code> (CSV with WKT, WKB
+hex, and expected results) are read by test suites in all three
+languages, ensuring cross-language consistency.</p>
+</div>
+<div id="acknowledgements" class="section level2">
+<h2>Acknowledgements</h2>
+<ul>
+<li><strong>Noam Ross</strong> and <strong>EcoHealth Alliance</strong>:
+the original fasterize scanline algorithm.</li>
+<li><strong>Daniel Baston</strong> and <strong>ISciences, LLC</strong>:
+the exactextract C++ analytical coverage algorithm, vendored under
+Apache-2.0.</li>
+<li>The boundary handling work was informed by discussion in <a href="https://github.com/hypertidy/fasterize/issues/6">hypertidy/fasterize#6</a>
+and <a href="https://github.com/OSGeo/gdal/issues/14615">OSGeo/gdal#14615</a>.
+Dan Baston has since folded the exactextract logic into GEOS
+itself.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

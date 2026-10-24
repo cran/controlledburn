@@ -1,0 +1,52 @@
+Package: controlledburn
+Title: Sparse Geometry Rasterization with Exact Coverage Fractions
+Version: 0.3.1
+Authors@R: c(
+    person("Michael", "Sumner", email = "mdsumner@gmail.com",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-2471-7511")),
+    person("Noam", "Ross", role = "aut",
+           comment = c(ORCID = "0000-0002-2136-0000")),
+    person("EcoHealth Alliance", role = "cph",
+           comment = "Original fasterize scanline logic"),
+    person("Jim", "Hester", role = "ctb",
+           comment = "Wrote CollectorList.h for early version"),
+    person("Daniel", "Baston", role = "cph",
+           comment = "exactextract C++ algorithm (vendored)"),
+    person("ISciences, LLC", role = "cph",
+           comment = "exactextract C++ algorithm (vendored)"))
+Description: Rasterize polygon, line, and point geometry without
+    materializing any pixel values. For polygons it computes exact coverage
+    fractions for polygon-grid intersections, returning sparse tables:
+    run-length encoded interior cells and individually weighted boundary
+    cells. The scanline algorithm is O(perimeter) in both time and memory,
+    using the scan line fill attributed to Wylie et al. (1967)
+    <doi:10.1145/1465611.1465619>. Exact coverage fractions use the
+    'exactextract' algorithm by Daniel Baston, vendored from the
+    'exactextractr' package <doi:10.32614/CRAN.package.exactextractr>.
+    Derived from the 'fasterize' package by Noam Ross.
+License: Apache License (== 2.0)
+Copyright: See file COPYRIGHTS
+Encoding: UTF-8
+LinkingTo: cpp11
+Imports: wk
+Suggests: geos, testthat (>= 3.0.0), knitr, rmarkdown, fasterize,
+        terra, raster, ggplot2
+URL: https://github.com/hypertidy/controlledburn
+BugReports: https://github.com/hypertidy/controlledburn/issues
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.0
+Depends: R (>= 3.5)
+NeedsCompilation: yes
+Packaged: 2026-10-15 04:19:00 UTC; mdsumner
+Author: Michael Sumner [aut, cre] (ORCID:
+    <https://orcid.org/0000-0002-2471-7511>),
+  Noam Ross [aut] (ORCID: <https://orcid.org/0000-0002-2136-0000>),
+  EcoHealth Alliance [cph] (Original fasterize scanline logic),
+  Jim Hester [ctb] (Wrote CollectorList.h for early version),
+  Daniel Baston [cph] (exactextract C++ algorithm (vendored)),
+  ISciences, LLC [cph] (exactextract C++ algorithm (vendored))
+Maintainer: Michael Sumner <mdsumner@gmail.com>
+Repository: CRAN
+Date/Publication: 2026-10-24 11:00:21 UTC
