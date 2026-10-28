@@ -1,3 +1,15 @@
+# controlledburn 0.3.2
+
+* Fixed a GCC 16 `-Warray-bounds` warning ("array subscript -1 is outside
+  array bounds") in the vendored exactextract code, reported by CRAN's
+  r-devel gcc flavors. Ring closedness in `analytical_covered_fraction()` is
+  now tested on the input coordinate vector, which the compiler can prove is
+  non-empty, rather than on a copy it cannot. No change in behaviour or output.
+
+* Removed the quotes around the exactextract algorithm name in the package
+  Description, per the CRAN maintainers' request (the `'exactextractr'`
+  package reference is retained).
+
 # controlledburn 0.3.1
 
 * Fixed: `materialise_chunk(fun = "sum")` assigned 1 to interior run cells

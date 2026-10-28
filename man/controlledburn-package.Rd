@@ -6,12 +6,13 @@
 \alias{controlledburn-package}
 \title{controlledburn: Sparse Geometry Rasterization with Exact Coverage Fractions}
 \description{
-Rasterize polygon, line, and point geometry without materializing any pixel values. For polygons it computes exact coverage fractions for polygon-grid intersections, returning sparse tables: run-length encoded interior cells and individually weighted boundary cells. The scanline algorithm is O(perimeter) in both time and memory, using the scan line fill attributed to Wylie et al. (1967) \doi{10.1145/1465611.1465619}. Exact coverage fractions use the 'exactextract' algorithm by Daniel Baston, vendored from the 'exactextractr' package \doi{10.32614/CRAN.package.exactextractr}. Derived from the 'fasterize' package by Noam Ross.
+Rasterize polygon, line, and point geometry without materializing any pixel values. For polygons it computes exact coverage fractions for polygon-grid intersections, returning sparse tables: run-length encoded interior cells and individually weighted boundary cells. The scanline algorithm is O(perimeter) in both time and memory, using the scan line fill attributed to Wylie et al. (1967) \doi{10.1145/1465611.1465619}. Exact coverage fractions use the exactextract algorithm by Daniel Baston, vendored from the 'exactextractr' package \doi{10.32614/CRAN.package.exactextractr}. Derived from the 'fasterize' package by Noam Ross.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://github.com/hypertidy/controlledburn}
+  \item \url{https://hypertidy.github.io/controlledburn/}
   \item Report bugs at \url{https://github.com/hypertidy/controlledburn/issues}
 }
 

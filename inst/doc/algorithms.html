@@ -542,7 +542,10 @@ the polygon’s true geometric area.</p>
 <h2>The same polygon, two classifications</h2>
 <p>The difference is only at the boundary. Both approaches agree on
 interior cells (fully inside) and exterior cells (fully outside). They
-disagree on the ~O(perimeter) boundary cells:</p>
+disagree on the ~O(perimeter) boundary cells. (To compare the two rules
+interactively on world countries and coastlines, in several projections,
+see <a href="https://hypertidy.github.io/playproj/rasterize.html">playproj:
+rasterize</a>.)</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Side-by-side</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>centers<span class="sc">$</span>approx <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(centers<span class="sc">$</span>inside, <span class="st">&quot;in&quot;</span>, <span class="st">&quot;out&quot;</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>centers<span class="sc">$</span>coverage <span class="ot">&lt;-</span> centers<span class="sc">$</span>class</span>
@@ -799,7 +802,11 @@ memory.</p>
 <p>controlledburn produces <strong>sparse output</strong>: only the
 non-empty cells are recorded. Interior cells are run-length encoded
 (<code>$runs</code>), boundary cells have individual records
-(<code>$edges</code>). This is O(perimeter) in memory.</p>
+(<code>$edges</code>). This is O(perimeter) in memory. The storage
+section of <a href="https://hypertidy.github.io/playproj/rasterize.html">playproj:
+rasterize</a> makes the same comparison in bytes and in tiles touched,
+for a dense mask, row runs, a bounding box of fractions, and runs plus
+edge fractions.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">library</span>(geos)</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">as_geos_geometry</span>(<span class="fu">sprintf</span>(<span class="st">&quot;POLYGON ((%s))&quot;</span>,</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="fu">paste</span>(<span class="fu">sprintf</span>(<span class="st">&quot;%.1f %.1f&quot;</span>, poly_x, poly_y), <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)))</span>
@@ -881,16 +888,15 @@ for area-weighted zonal statistics — the same operation exactextract was
 built for. The key insight: the coverage fraction <em>is</em> the
 weight.</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; terra 1.9.50</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co"># A 20×20 raster of &quot;temperature&quot; values: a gradient from 10 to 30</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>r_temp <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="at">nrows =</span> <span class="dv">20</span>, <span class="at">ncols =</span> <span class="dv">20</span>, <span class="at">xmin =</span> <span class="dv">0</span>, <span class="at">xmax =</span> <span class="dv">10</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>               <span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> <span class="dv">10</span>, <span class="at">crs =</span> <span class="st">&quot;&quot;</span>)</span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="fu">values</span>(r_temp) <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">10</span>, <span class="dv">30</span>, <span class="at">length.out =</span> <span class="dv">400</span>)</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co"># A polygon that doesn&#39;t align with cell boundaries</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>poly <span class="ot">&lt;-</span> geos<span class="sc">::</span><span class="fu">as_geos_geometry</span>(</span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  <span class="st">&quot;POLYGON ((1.3 2.1, 7.8 1.5, 6.2 8.3, 2.5 6.9, 1.3 2.1))&quot;</span>)</span></code></pre></div>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co"># A 20×20 raster of &quot;temperature&quot; values: a gradient from 10 to 30</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>r_temp <span class="ot">&lt;-</span> <span class="fu">rast</span>(<span class="at">nrows =</span> <span class="dv">20</span>, <span class="at">ncols =</span> <span class="dv">20</span>, <span class="at">xmin =</span> <span class="dv">0</span>, <span class="at">xmax =</span> <span class="dv">10</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>               <span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> <span class="dv">10</span>, <span class="at">crs =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="fu">values</span>(r_temp) <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">10</span>, <span class="dv">30</span>, <span class="at">length.out =</span> <span class="dv">400</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co"># A polygon that doesn&#39;t align with cell boundaries</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>poly <span class="ot">&lt;-</span> geos<span class="sc">::</span><span class="fu">as_geos_geometry</span>(</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="st">&quot;POLYGON ((1.3 2.1, 7.8 1.5, 6.2 8.3, 2.5 6.9, 1.3 2.1))&quot;</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Burn with exact coverage fractions</span></span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">burn</span>(poly, <span class="at">extent =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">0</span>, <span class="dv">10</span>), <span class="at">dimension =</span> <span class="fu">c</span>(<span class="dv">20</span><span class="dt">L</span>, <span class="dv">20</span><span class="dt">L</span>))</span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>

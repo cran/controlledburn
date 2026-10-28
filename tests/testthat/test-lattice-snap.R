@@ -48,3 +48,37 @@ test_that("approx: a vertex on a row centre line does not fill the row to the gr
   expect_true(all(r$runs$col_end <= 2L))
   expect_equal(nrow(r$runs), 2L)
 })
+
+test_that("a cell with edges only along its walls stays a boundary cell", {
+  ## From a raster-derived waterbody (DEA Waterbodies uid q9g5b3eyr_v1): a
+  ## lattice-aligned notch. Cell [4, 5] x [2, 3] has polygon edges along
+  ## both walls, one crossing the row centre up and the other down, so it
+  ## has zero coverage and zero net winding. It used to get no boundary
+  ## record and was filled as part of the interior run: 3.5 cells, not 2.5.
+  wkt <- "POLYGON ((4 2, 2 7, 6 2, 5 2, 5 3, 3 5.5, 4 2.5, 4 2))"
+  r <- burn(wk::as_wkb(wk::wkt(wkt)), extent = c(0, 10, 0, 10), dimension = c(10L, 10L))
+  a <- sum(r$runs$col_end - r$runs$col_start + 1) + sum(r$edges$fraction)
+  expect_equal(a, 2.5, tolerance = 1e-6)
+  ## the notch cell is row 8, col 5 (1-based): outside
+  expect_false(any(r$runs$row == 8 & r$runs$col_start <= 5 & r$runs$col_end >= 5))
+  expect_false(any(r$edges$row == 8 & r$edges$col == 5))
+})
+
+test_that("a zero-width spike into a covered cell keeps it covered", {
+  ## Found by the controlledburn-rs property suite: the ring runs in through
+  ## the top-left corner of cell [4.8, 5.1] x [1.2, 1.5] to its centre and
+  ## straight back out. That traversal leaves where it entered and encloses
+  ## nothing; the cell is inside the polygon and must stay covered.
+  wkt <- paste0(
+    "POLYGON ((2.2955346720684804 -0.28831957426678434, 4.2871984006926445 -0.6968703145658899, ",
+    "6.183801073287196 -1.4711665488619694, 5.24135385306532 1.4474746273177665, ",
+    "5.275730794077829 1.5426958381891471, 5.824891418164306 2.019485421020327, ",
+    "5.151353853065319 1.696766993828962, 3.5999999999999996 2.6999999999999997, ",
+    "4.95 1.3499999999999996, 4.8 1.4999999999999996, 2.2955346720684804 -0.28831957426678434))"
+  )
+  r <- burn(wk::as_wkb(wk::wkt(wkt)), extent = c(0, 6, 0, 5.3999999999999995), dimension = c(20L, 18L))
+  a <- (sum(r$runs$col_end - r$runs$col_start + 1) + sum(r$edges$fraction)) * 0.09
+  expect_equal(a, 3.026275470389206, tolerance = 1e-6)
+  ## the spike cell is row 14, col 17 (1-based): fully covered
+  expect_true(any(r$runs$row == 14 & r$runs$col_start <= 17 & r$runs$col_end >= 17))
+})
